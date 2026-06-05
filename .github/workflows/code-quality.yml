@@ -1,0 +1,38 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag for manually running CI first code check workflow
+        required: False
+        default: ''
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Install uv (Python ${{ matrix.python-version }})
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+      with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+    - name: Install the project
+      run: uv sync --locked --all-extras --dev
+    - name: Linting
+      run: |
+        uv run ruff check .
+        uv run ruff format --check .
+    - name: Run tests
+      run: uv run pytest tests
