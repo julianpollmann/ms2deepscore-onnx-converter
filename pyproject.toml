@@ -24,3 +24,9 @@ dev = [
 
 [project.scripts]
 ms2ds_onnx = "ms2ds_converter.cli:main"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:# The axis name.*will not be used:UserWarning",
+    "ignore:`isinstance\\(treespec, LeafSpec\\)` is deprecated:FutureWarning"
+]
