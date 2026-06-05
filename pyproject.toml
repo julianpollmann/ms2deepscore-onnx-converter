@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Julian Pollmann", email = "julian.pollmann@hs-duesseldorf.de" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "ms2deepscore>=2.9.0",
     "onnxscript>=0.7.0",
