@@ -25,7 +25,6 @@ def get_metadata_length(model_settings: SettingsMS2Deepscore) -> int:
     int
         number of metadata in settings.
     """
-    print(type(model_settings))
     if (
         hasattr(model_settings, "additional_metadata")
         and model_settings.additional_metadata
