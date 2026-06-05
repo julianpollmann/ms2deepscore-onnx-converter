@@ -11,6 +11,7 @@ logging.basicConfig(
     format="[ms2ds-converter] %(levelname)s: %(message)s", level=logging.INFO
 )
 
+
 def get_metadata_length(model_settings: SettingsMS2Deepscore) -> int:
     """Derive the Metadata length from the provided pytorch model settings.
 
@@ -74,13 +75,15 @@ def convert_to_onnx(pytorch_model_path: str, output_dir: str):
         dummy_inputs = (dummy_peaks, dummy_meta)
         input_names = ["input_peaks", "input_metadata"]
         dynamic_shapes = {
-            "input_peaks": {0: "batch_size"},
-            "input_metadata": {0: "batch_size"},
+            "spectra_tensors": ["batch_size", None],
+            "metadata_tensors": ["batch_size", None],
         }
     else:
         dummy_inputs = (dummy_peaks,)
         input_names = ["input_peaks"]
-        dynamic_shapes = {"input_peaks": {0: "batch_size"}}
+        dynamic_shapes = {
+            "spectra_tensors": ["batch_size", None],
+        }
 
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -100,7 +103,7 @@ def convert_to_onnx(pytorch_model_path: str, output_dir: str):
         do_constant_folding=True,
         input_names=input_names,
         output_names=["embedding"],
-        dynamic_axes=dynamic_shapes,
+        dynamic_shapes=dynamic_shapes,
     )
 
     # Convert model settings to json
