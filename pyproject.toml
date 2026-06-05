@@ -16,5 +16,11 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.16",
+]
+
 [project.scripts]
 ms2ds_onnx = "ms2ds_converter.cli:main"

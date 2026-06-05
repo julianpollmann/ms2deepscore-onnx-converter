@@ -3,22 +3,53 @@ import torch
 import numpy as np
 from pathlib import Path
 from ms2deepscore.models import load_model
+from ms2deepscore import SettingsMS2Deepscore
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='[ms2ds-converter] %(levelname)s: %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format="[ms2ds-converter] %(levelname)s: %(message)s", level=logging.INFO
+)
 
-def get_metadata_length(model_settings) -> int:
-    if hasattr(model_settings, "additional_metadata") and model_settings.additional_metadata:
+def get_metadata_length(model_settings: SettingsMS2Deepscore) -> int:
+    """Derive the Metadata length from the provided pytorch model settings.
+
+    Parameters
+    ----------
+    model_settings : SettingsMS2Deepscore
+        SettingsMS2Deepscore of the pytorch model.
+
+    Returns
+    -------
+    int
+        number of metadata in settings.
+    """
+    print(type(model_settings))
+    if (
+        hasattr(model_settings, "additional_metadata")
+        and model_settings.additional_metadata
+    ):
         return len(model_settings.additional_metadata)
-    
+
     return 0
 
+
 def convert_to_onnx(pytorch_model_path: str, output_dir: str):
+    """Converts a ms2deepscore pytorch model to onnx.
+
+    Parameters
+    ----------
+    pytorch_model_path : str
+        The full path to the .pt model file.
+    output_dir : str
+        The output dir to store the onnx model.
+    """
     try:
         model = load_model(pytorch_model_path)
-    except (ValueError, RuntimeError, TypeError) as e:
-        logger.warning("Model contains unsafe tensors. It was loaded using legacy weights.")
+    except (ValueError, RuntimeError, TypeError):
+        logger.warning(
+            "Model contains unsafe tensors. It was loaded using legacy weights."
+        )
         model = load_model(pytorch_model_path, allow_legacy=True)
 
     encoder = model.encoder
@@ -30,7 +61,7 @@ def convert_to_onnx(pytorch_model_path: str, output_dir: str):
 
     # Get shape of metadata
     num_metadata = get_metadata_length(model.model_settings)
-    
+
     # Get bins
     num_peaks = total_in_features - num_metadata
 
@@ -41,26 +72,24 @@ def convert_to_onnx(pytorch_model_path: str, output_dir: str):
     if num_metadata > 0:
         dummy_meta = torch.randn(1, num_metadata)
         dummy_inputs = (dummy_peaks, dummy_meta)
-        input_names = ['input_peaks', 'input_metadata']
+        input_names = ["input_peaks", "input_metadata"]
         dynamic_shapes = {
-            'input_peaks': {0: 'batch_size'},
-            'input_metadata': {0: 'batch_size'}
+            "input_peaks": {0: "batch_size"},
+            "input_metadata": {0: "batch_size"},
         }
     else:
         dummy_inputs = (dummy_peaks,)
-        input_names = ['input_peaks']
-        dynamic_shapes = {
-            'input_peaks': {0: 'batch_size'}
-        }
+        input_names = ["input_peaks"]
+        dynamic_shapes = {"input_peaks": {0: "batch_size"}}
 
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
-    
+
     model_name = Path(pytorch_model_path).stem
     onnx_file = Path(out_path, model_name).with_suffix(".onnx")
     json_file = Path(out_path, f"{model_name}_settings").with_suffix(".json")
 
-    logger.info(f"Export ONNX to {out_path}")
+    logger.info(f"Export ONNX model to {out_path}")
 
     torch.onnx.export(
         encoder,
@@ -70,12 +99,12 @@ def convert_to_onnx(pytorch_model_path: str, output_dir: str):
         opset_version=None,
         do_constant_folding=True,
         input_names=input_names,
-        output_names=['embedding'],
-        dynamic_axes=dynamic_shapes
+        output_names=["embedding"],
+        dynamic_axes=dynamic_shapes,
     )
 
     # Convert model settings to json
-    settings_dict = vars(model.model_settings).copy()    
+    settings_dict = vars(model.model_settings).copy()
     for key, value in settings_dict.items():
         if isinstance(value, np.ndarray):
             settings_dict[key] = value.tolist()
