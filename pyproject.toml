@@ -1,16 +1,31 @@
 [project]
-name = "ms2ds-converter"
+name = "ms2deepscore-onnx-converter"
 version = "0.1.0"
 description = "A CLI tool to convert ms2deepscore PyTorch models to ONNX"
 readme = "README.md"
 authors = [
     { name = "Julian Pollmann", email = "julian.pollmann@hs-duesseldorf.de" }
 ]
+license-files = ["LICENSE"]
+keywords = [
+  "mass spectrometry",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering"
+]
+
 requires-python = ">=3.12"
 dependencies = [
     "ms2deepscore>=2.9.0",
     "onnxscript>=0.7.0",
 ]
+
+[project.urls]
+repository = "https://github.com/julianpollmann/ms2deepscore-onnx-converter"
 
 [build-system]
 requires = ["hatchling"]
