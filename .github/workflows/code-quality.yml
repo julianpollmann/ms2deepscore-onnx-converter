@@ -26,8 +26,8 @@ jobs:
     - name: Install uv (Python ${{ matrix.python-version }})
       uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
       with:
-          python-version: ${{ matrix.python-version }}
-          enable-cache: true
+        python-version: ${{ matrix.python-version }}
+        enable-cache: true
     - name: Install the project
       run: uv sync --locked --all-extras --dev
     - name: Linting

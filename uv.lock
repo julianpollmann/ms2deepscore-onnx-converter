@@ -1124,7 +1124,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ms2ds-converter"
+name = "ms2deepscore-onnx-converter"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
