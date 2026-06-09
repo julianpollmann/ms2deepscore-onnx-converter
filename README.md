@@ -13,8 +13,10 @@ pip install .
 ```
 
 ## Usage
+The tool can either convert a local ms2deepscore model or download one from zenodo and convert it to onnx.
 ```
 # Using the CLI:
+ms2ds_onnx https://zenodo.org/records/17826815 -o onnx_model_dir
 ms2ds_onnx ms2deepscore_model.pt -o onnx_model_dir
 
 # or within your python script:
