@@ -1130,6 +1130,7 @@ source = { editable = "." }
 dependencies = [
     { name = "ms2deepscore" },
     { name = "onnxscript" },
+    { name = "pooch" },
 ]
 
 [package.dev-dependencies]
@@ -1142,6 +1143,7 @@ dev = [
 requires-dist = [
     { name = "ms2deepscore", specifier = ">=2.9.0" },
     { name = "onnxscript", specifier = ">=0.7.0" },
+    { name = "pooch", specifier = ">=1.9.0" },
 ]
 
 [package.metadata.requires-dev]
