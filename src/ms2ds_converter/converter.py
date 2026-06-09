@@ -34,14 +34,14 @@ def get_metadata_length(model_settings: SettingsMS2Deepscore) -> int:
     return 0
 
 
-def convert_to_onnx(pytorch_model_path: str, output_dir: str):
+def convert_to_onnx(pytorch_model_path: Path, output_dir: Path):
     """Converts a ms2deepscore pytorch model to onnx.
 
     Parameters
     ----------
-    pytorch_model_path : str
+    pytorch_model_path : Path
         The full path to the .pt model file.
-    output_dir : str
+    output_dir : Path
         The output dir to store the onnx model.
     """
     try:

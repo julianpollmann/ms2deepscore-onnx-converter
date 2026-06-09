@@ -16,7 +16,7 @@ def test_cli_default_output(mock_convert, model_path):
     test_args = ["cli.py", str(model_path)]
     with patch.object(sys, "argv", test_args):
         cli_main()
-        mock_convert.assert_called_once_with(str(model_path), "./onnx_export")
+        mock_convert.assert_called_once_with(Path(model_path), "./onnx_export")
 
 
 @patch("ms2ds_converter.cli.convert_to_onnx")
@@ -24,7 +24,7 @@ def test_cli_custom_output(mock_convert, model_path):
     test_args = ["cli.py", str(model_path), "-o", "/my/custom/path"]
     with patch.object(sys, "argv", test_args):
         cli_main()
-        mock_convert.assert_called_once_with(str(model_path), "/my/custom/path")
+        mock_convert.assert_called_once_with(Path(model_path), "/my/custom/path")
 
 
 def test_cli_missing_argument():
