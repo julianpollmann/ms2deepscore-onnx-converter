@@ -1,7 +1,13 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from ms2ds_converter.data_loader import _extract_record_id, resolve_model_path, extract_zenodo_zip_files, download_zenodo_files
+from ms2ds_converter.data_loader import (
+    _extract_record_id,
+    resolve_model_path,
+    extract_zenodo_zip_files,
+    download_zenodo_files,
+)
+
 
 @pytest.mark.parametrize(
     "identifier, expected_id",
