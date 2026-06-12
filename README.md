@@ -28,7 +28,7 @@ convert_to_onnx("ms2deepscore_model.pt", "onnx_model_dir")
 ## Inference using onnx runtime
 After converting a ms2deepscore model to pytorch you can use the [ONNX Runtime](https://onnxruntime.ai/) for inference. You'll need to install onnxruntime  separately.
 
-```
+```python
 import json
 
 import numpy as np
