@@ -1,6 +1,4 @@
-import json
 import torch
-import numpy as np
 from pathlib import Path
 from ms2deepscore.models import load_model
 from ms2deepscore import SettingsMS2Deepscore
@@ -106,12 +104,22 @@ def convert_to_onnx(pytorch_model_path: Path, output_dir: Path):
     )
 
     # Convert model settings to json
-    settings_dict = vars(model.model_settings).copy()
-    for key, value in settings_dict.items():
-        if isinstance(value, np.ndarray):
-            settings_dict[key] = value.tolist()
+    # Some keys are required for inference
+    required_keys = [
+        "embedding_dim",
+        "intensity_scaling",
+        "min_mz",
+        "max_mz",
+        "mz_bin_width",
+        "number_of_bins",
+    ]
 
-    with open(json_file, "w", encoding="utf-8") as f:
-        json.dump(settings_dict, f, indent=4)
+    for key in required_keys:
+        if not hasattr(model.model_settings, key):
+            logger.error(
+                f"SettingsMS2Deepscore model_settings do not contain required attribute {key}. Inference may not work."
+            )
+
+    model.model_settings.save_to_file(json_file)
 
     logger.info("Conversion successful.")
