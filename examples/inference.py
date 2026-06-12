@@ -1,34 +1,3 @@
-# ms2deepscore pytorch 2 onnx converter
-
-This library/cli tool aims at converting [ms2deepscore](https://github.com/matchms/ms2deepscore) models from pytorch to [onnx](https://github.com/onnx/onnx).
-
-## Installation
-```
-git clone git@github.com:julianpollmann/ms2deepscore-onnx-converter.git
-cd ms2deepscore-onnx-converter
-
-uv sync
-# or using pip:
-pip install .
-```
-
-## Usage
-The tool can either convert a local ms2deepscore model or download one from zenodo and convert it to onnx.
-```
-# Using the CLI:
-ms2ds_onnx https://zenodo.org/records/17826815 -o onnx_model_dir
-ms2ds_onnx ms2deepscore_model.pt -o onnx_model_dir
-
-# or within your python script:
-from ms2ds_converter import convert_to_onnx
-
-convert_to_onnx("ms2deepscore_model.pt", "onnx_model_dir")
-```
-
-## Inference using onnx runtime
-After converting a ms2deepscore model to pytorch you can use the [ONNX Runtime](https://onnxruntime.ai/) for inference. You'll need to install onnxruntime  separately.
-
-```python
 import json
 
 import numpy as np
@@ -37,6 +6,7 @@ from matchms import Spectrum
 from matchms.importing import load_spectra
 from ms2deepscore import SettingsMS2Deepscore
 from ms2deepscore.tensorize_spectra import tensorize_spectra
+
 
 def compute_embeddings_onnx(
     onnx_session: ort.InferenceSession,
@@ -67,9 +37,11 @@ def main():
     # load some spectra with matchms and maybe do some filtering...
     spectra = list(load_spectra("spectra.mgf"))
 
+    print(ort.get_available_providers())
+
     # Load exported SettingsMS2Deepscore.
     with open(
-        "onnx_model_dir/ms2deepscore_model_settings.json", "r", encoding="utf-8"
+        "../onnx_model_dir/ms2deepscore_model_settings.json", "r", encoding="utf-8"
     ) as file:
         settings_dict = json.load(file)
 
@@ -77,10 +49,11 @@ def main():
     settings_dict["spectrum_file_path"] = None
     settings = SettingsMS2Deepscore(**settings_dict)
 
-    # Load ONNX Model and compute embeddings, will use either GPU or CPU as fallback.
+    # Load ONNX Model and compute embeddings.
+    # ort_session = ort.InferenceSession("onnx_model_dir/ms2deepscore_model.onnx")
     ort_session = ort.InferenceSession(
-        "onnx_model_dir/ms2deepscore_model.onnx",
-        providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+        "../onnx_model_dir/ms2deepscore_model.onnx",
+        providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
     )
     embeddings = compute_embeddings_onnx(ort_session, spectra, settings)
 
@@ -90,9 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-
-
-## License
-GNU GPLv3. See [License](LICENSE)
