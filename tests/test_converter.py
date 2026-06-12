@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from ms2deepscore import SettingsMS2Deepscore
 from ms2ds_converter.converter import convert_to_onnx, get_metadata_length
-
+import logging
 
 @pytest.fixture
 def model_path():
@@ -15,6 +15,12 @@ def model_path():
 def mock_settings():
     settings = MagicMock(spec=SettingsMS2Deepscore)
     settings.additional_metadata = ["precursor_mz", "charge"]
+    settings.embedding_dim = 500
+    settings.intensity_scaling = 0.5
+    settings.min_mz = 10
+    settings.max_mz = 1000
+    settings.mz_bin_width = 0.1
+    settings.number_of_bins = 9900
     return settings
 
 
@@ -63,6 +69,7 @@ def test_convert_to_onnx_success_no_metadata(
         convert_to_onnx("dummy_model.pt", str(tmp_path))
         _, kwargs = mock_torch_export.call_args
         assert kwargs["input_names"] == ["input_peaks"]
+        mock_model.model_settings.save_to_file.assert_called_once()
 
 
 @patch("ms2ds_converter.converter.load_model")
@@ -79,14 +86,34 @@ def test_convert_to_onnx_fallback_to_legacy(
 
 @patch("ms2ds_converter.converter.load_model")
 @patch("ms2ds_converter.converter.torch.onnx.export")
-def test_convert_to_onnx_json_numpy_handling(
-    mock_torch_export, mock_load_model, tmp_path, mock_model
+def test_convert_to_onnx_required_keys_present(
+    mock_torch_export, mock_load_model, tmp_path, mock_model, caplog
 ):
+    """Testet, dass kein Error geloggt wird, wenn alle required_keys vorhanden sind."""
     mock_load_model.return_value = mock_model
-    mock_model.model_settings.mock_array = np.array([5, 10, 15])
 
-    with patch("builtins.open"), patch("json.dump") as mock_json_dump:
+    with caplog.at_level(logging.ERROR):
         convert_to_onnx("dummy_model.pt", str(tmp_path))
-        written_dict = mock_json_dump.call_args[0][0]
-        assert isinstance(written_dict["mock_array"], list)
-        assert written_dict["mock_array"] == [5, 10, 15]
+
+    errors = [r.message for r in caplog.records if "do not contain required attribute" in r.message]
+    assert len(errors) == 0
+
+
+@patch("ms2ds_converter.converter.load_model")
+@patch("ms2ds_converter.converter.torch.onnx.export")
+def test_convert_to_onnx_missing_required_keys(
+    mock_torch_export, mock_load_model, tmp_path, mock_model, caplog
+):
+    """Testet, dass spezifische ERROR-Logs geschrieben werden, wenn required_keys fehlen."""
+    mock_load_model.return_value = mock_model
+    
+    del mock_model.model_settings.min_mz
+    del mock_model.model_settings.embedding_dim
+
+    with caplog.at_level(logging.ERROR):
+        convert_to_onnx("dummy_model.pt", str(tmp_path))
+
+    assert any("do not contain required attribute min_mz" in r.message for r in caplog.records)
+    assert any("do not contain required attribute embedding_dim" in r.message for r in caplog.records)
+    
+    assert not any("do not contain required attribute max_mz" in r.message for r in caplog.records)
