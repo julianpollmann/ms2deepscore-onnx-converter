@@ -1,10 +1,10 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import numpy as np
 import pytest
 from ms2deepscore import SettingsMS2Deepscore
 from ms2ds_converter.converter import convert_to_onnx, get_metadata_length
 import logging
+
 
 @pytest.fixture
 def model_path():
@@ -95,7 +95,11 @@ def test_convert_to_onnx_required_keys_present(
     with caplog.at_level(logging.ERROR):
         convert_to_onnx("dummy_model.pt", str(tmp_path))
 
-    errors = [r.message for r in caplog.records if "do not contain required attribute" in r.message]
+    errors = [
+        r.message
+        for r in caplog.records
+        if "do not contain required attribute" in r.message
+    ]
     assert len(errors) == 0
 
 
@@ -106,14 +110,21 @@ def test_convert_to_onnx_missing_required_keys(
 ):
     """Testet, dass spezifische ERROR-Logs geschrieben werden, wenn required_keys fehlen."""
     mock_load_model.return_value = mock_model
-    
+
     del mock_model.model_settings.min_mz
     del mock_model.model_settings.embedding_dim
 
     with caplog.at_level(logging.ERROR):
         convert_to_onnx("dummy_model.pt", str(tmp_path))
 
-    assert any("do not contain required attribute min_mz" in r.message for r in caplog.records)
-    assert any("do not contain required attribute embedding_dim" in r.message for r in caplog.records)
-    
-    assert not any("do not contain required attribute max_mz" in r.message for r in caplog.records)
+    assert any(
+        "do not contain required attribute min_mz" in r.message for r in caplog.records
+    )
+    assert any(
+        "do not contain required attribute embedding_dim" in r.message
+        for r in caplog.records
+    )
+
+    assert not any(
+        "do not contain required attribute max_mz" in r.message for r in caplog.records
+    )
