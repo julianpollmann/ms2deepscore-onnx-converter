@@ -4,12 +4,9 @@ This library/cli tool aims at converting [ms2deepscore](https://github.com/match
 
 ## Installation
 ```
-git clone git@github.com:julianpollmann/ms2deepscore-onnx-converter.git
-cd ms2deepscore-onnx-converter
-
-uv sync
+uv add ms2deepscore-onnx-converter
 # or using pip:
-pip install .
+pip install ms2deepscore-onnx-converter
 ```
 
 ## Usage

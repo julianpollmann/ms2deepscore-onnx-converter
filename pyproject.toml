@@ -43,6 +43,7 @@ dev = [
 
 [project.scripts]
 ms2ds_onnx = "ms2ds_converter.cli:main"
+ms2deepscore-onnx-converter = "ms2ds_converter.cli:main"
 
 [tool.pytest.ini_options]
 filterwarnings = [
