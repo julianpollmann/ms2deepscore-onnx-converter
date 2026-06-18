@@ -1125,7 +1125,7 @@ wheels = [
 
 [[package]]
 name = "ms2deepscore-onnx-converter"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "ms2deepscore" },
