@@ -2,8 +2,15 @@
 
 This library/cli tool aims at converting [ms2deepscore](https://github.com/matchms/ms2deepscore) models from pytorch to [onnx](https://github.com/onnx/onnx).
 
-## Installation
+## Usage with uvx
+```bash
+uvx ms2deepscore-onnx-converter https://zenodo.org/records/17826815 -o onnx_model_dir
+# or
+uvx ms2deepscore-onnx-converter YOUR_MS2DEEPSCORE_MODEL.pt
 ```
+
+## Installation
+```bash
 uv add ms2deepscore-onnx-converter
 # or using pip:
 pip install ms2deepscore-onnx-converter
@@ -11,7 +18,7 @@ pip install ms2deepscore-onnx-converter
 
 ## Usage
 The tool can either convert a local ms2deepscore model or download one from zenodo and convert it to onnx.
-```
+```python
 # Using the CLI:
 ms2ds_onnx https://zenodo.org/records/17826815 -o onnx_model_dir
 ms2ds_onnx ms2deepscore_model.pt -o onnx_model_dir
