@@ -1,4 +1,9 @@
 import json
+import platform
+try:
+    import openvino  # noqa: F401
+except ImportError:
+    openvino = None
 
 import numpy as np
 import onnxruntime as ort
@@ -33,6 +38,35 @@ def compute_embeddings_onnx(
     return embeddings
 
 
+def configure_onnx_providers() -> list:
+    available = ort.get_available_providers()
+    providers = []
+
+    # CUDA
+    if "CUDAExecutionProvider" in available:
+        providers.append("CUDAExecutionProvider")
+
+    # macOS -> use CoreML
+    if platform.system() == "Darwin":
+        major, minor, *_ = map(int, platform.mac_ver()[0].split("."))
+        if (major, minor) >= (12, 0):
+            providers.append(("CoreMLExecutionProvider", {
+                "ModelFormat": "MLProgram",
+                "MLComputeUnits": "ALL"
+            }))
+
+    # Intel -> OpenVino
+    if "OpenVINOExecutionProvider" in available:
+        providers.append(("OpenVINOExecutionProvider", {
+            "device_type": "GPU"
+        }))
+
+    # Fallback
+    providers.append("CPUExecutionProvider")
+
+    return providers
+
+
 def main():
     # load some spectra with matchms and maybe do some filtering...
     spectra = list(load_spectra("spectra.mgf"))
@@ -50,10 +84,10 @@ def main():
     settings = SettingsMS2Deepscore(**settings_dict)
 
     # Load ONNX Model and compute embeddings.
-    # ort_session = ort.InferenceSession("onnx_model_dir/ms2deepscore_model.onnx")
+    providers = configure_onnx_providers()
     ort_session = ort.InferenceSession(
         "../onnx_model_dir/ms2deepscore_model.onnx",
-        providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+        providers=providers
     )
     embeddings = compute_embeddings_onnx(ort_session, spectra, settings)
 

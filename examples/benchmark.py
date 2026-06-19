@@ -2,6 +2,11 @@ import json
 import time
 import numpy as np
 import onnxruntime as ort
+import platform
+try:
+    import openvino  # noqa: F401
+except ImportError:
+    openvino = None
 
 from ms2deepscore import SettingsMS2Deepscore
 from ms2deepscore.models import compute_embedding_array, load_model
@@ -69,6 +74,35 @@ def compute_embeddings_onnx(
     return embeddings
 
 
+def configure_onnx_providers() -> list:
+    available = ort.get_available_providers()
+    providers = []
+
+    # CUDA
+    if "CUDAExecutionProvider" in available:
+        providers.append("CUDAExecutionProvider")
+
+    # macOS -> use CoreML
+    if platform.system() == "Darwin":
+        major, minor, *_ = map(int, platform.mac_ver()[0].split("."))
+        if (major, minor) >= (12, 0):
+            providers.append(("CoreMLExecutionProvider", {
+                "ModelFormat": "MLProgram",
+                "MLComputeUnits": "ALL"
+            }))
+
+    # Intel -> OpenVino
+    if "OpenVINOExecutionProvider" in available:
+        providers.append(("OpenVINOExecutionProvider", {
+            "device_type": "GPU"
+        }))
+
+    # Fallback
+    providers.append("CPUExecutionProvider")
+
+    return providers
+
+
 def run_benchmark():
     # ----------------------------------------------------
     # 1. Setup
@@ -84,10 +118,12 @@ def run_benchmark():
     with open(ONNX_MODEL_SETTINGS_PATH, "r", encoding="utf-8") as file:
         settings_dict = json.load(file)
 
+    providers = configure_onnx_providers()
     settings_dict["spectrum_file_path"] = None
     settings = SettingsMS2Deepscore(**settings_dict)
     ort_session = ort.InferenceSession(
-        ONNX_MODEL_PATH, providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+        ONNX_MODEL_PATH,
+        providers=providers
     )
 
     print(
