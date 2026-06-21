@@ -3,6 +3,7 @@ import time
 import numpy as np
 import onnxruntime as ort
 import platform
+
 try:
     import openvino  # noqa: F401
 except ImportError:
@@ -86,16 +87,16 @@ def configure_onnx_providers() -> list:
     if platform.system() == "Darwin":
         major, minor, *_ = map(int, platform.mac_ver()[0].split("."))
         if (major, minor) >= (12, 0):
-            providers.append(("CoreMLExecutionProvider", {
-                "ModelFormat": "MLProgram",
-                "MLComputeUnits": "ALL"
-            }))
+            providers.append(
+                (
+                    "CoreMLExecutionProvider",
+                    {"ModelFormat": "MLProgram", "MLComputeUnits": "ALL"},
+                )
+            )
 
     # Intel -> OpenVino
     if "OpenVINOExecutionProvider" in available:
-        providers.append(("OpenVINOExecutionProvider", {
-            "device_type": "GPU"
-        }))
+        providers.append(("OpenVINOExecutionProvider", {"device_type": "GPU"}))
 
     # Fallback
     providers.append("CPUExecutionProvider")
@@ -121,10 +122,7 @@ def run_benchmark():
     providers = configure_onnx_providers()
     settings_dict["spectrum_file_path"] = None
     settings = SettingsMS2Deepscore(**settings_dict)
-    ort_session = ort.InferenceSession(
-        ONNX_MODEL_PATH,
-        providers=providers
-    )
+    ort_session = ort.InferenceSession(ONNX_MODEL_PATH, providers=providers)
 
     print(
         f"-> Setup completed. Benchmarking {len(spectra)} spectra over {NUM_RUNS} runs.\n"
