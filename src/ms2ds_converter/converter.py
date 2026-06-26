@@ -1,8 +1,13 @@
+import json
+
+import onnx
 import torch
 from pathlib import Path
 from ms2deepscore.models import load_model
 from ms2deepscore import SettingsMS2Deepscore
 import logging
+
+from torch.export import Dim
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -63,6 +68,8 @@ def convert_to_onnx(pytorch_model_path: Path, output_dir: Path):
     # Get bins
     num_peaks = total_in_features - num_metadata
 
+    batch_size = Dim("batch_size", min=1)
+
     # Dummy inputs
     dummy_peaks = torch.randn(1, num_peaks)
     logger.info(f"Will use {dummy_peaks.shape} as dummy_peaks")
@@ -72,36 +79,34 @@ def convert_to_onnx(pytorch_model_path: Path, output_dir: Path):
         dummy_inputs = (dummy_peaks, dummy_meta)
         input_names = ["input_peaks", "input_metadata"]
         dynamic_shapes = {
-            "spectra_tensors": ["batch_size", None],
-            "metadata_tensors": ["batch_size", None],
+            "spectra_tensors": {0: batch_size},
+            "metadata_tensors": {0: batch_size},
         }
     else:
         dummy_inputs = (dummy_peaks,)
         input_names = ["input_peaks"]
-        dynamic_shapes = {
-            "spectra_tensors": ["batch_size", None],
-        }
+        dynamic_shapes = {"spectra_tensors": {0: batch_size}}
 
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
     model_name = Path(pytorch_model_path).stem
     onnx_file = Path(out_path, model_name).with_suffix(".onnx")
-    json_file = Path(out_path, f"{model_name}_settings").with_suffix(".json")
 
     logger.info(f"Export ONNX model to {out_path}")
 
-    torch.onnx.export(
+    # Use the export to later add required metadata to the onnx model for inference.
+    onnx_program = torch.onnx.export(
         encoder,
         dummy_inputs,
-        str(onnx_file),
+        dynamo=True,
         export_params=True,
-        opset_version=None,
-        do_constant_folding=True,
         input_names=input_names,
         output_names=["embedding"],
         dynamic_shapes=dynamic_shapes,
     )
+
+    onnx_model = onnx_program.model_proto
 
     # Convert model settings to json
     # Some keys are required for inference
@@ -120,6 +125,11 @@ def convert_to_onnx(pytorch_model_path: Path, output_dir: Path):
                 f"SettingsMS2Deepscore model_settings do not contain required attribute {key}. Inference may not work."
             )
 
-    model.model_settings.save_to_file(json_file)
+    # Add inference settings
+    training_metadata = onnx_model.metadata_props.add()
+    training_metadata.key = "settings"
+    training_metadata.value = json.dumps(model.model_settings.get_dict())
+
+    onnx.save(onnx_model, onnx_file)
 
     logger.info("Conversion successful.")

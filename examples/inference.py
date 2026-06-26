@@ -72,21 +72,23 @@ def main():
     # load some spectra with matchms and maybe do some filtering...
     spectra = list(load_spectra("spectra.mgf"))
 
-    # Load exported SettingsMS2Deepscore.
-    with open(
-        "../onnx_model_dir/ms2deepscore_model_settings.json", "r", encoding="utf-8"
-    ) as file:
-        settings_dict = json.load(file)
+    # Load model with attached settings
+    providers = configure_onnx_providers()
+    ort_session = ort.InferenceSession(
+        "../onnx_export/ms2deepscore_model.onnx", providers=providers
+    )
+    model_metadata = ort_session.get_modelmeta().custom_metadata_map
+
+    if "settings" not in model_metadata:
+        raise ValueError(
+            "Model does not contain settings. These are required for inference."
+        )
 
     # Remove spectrum_file_path from settings for inference, since it will fail validation.
+    settings_dict = json.loads(model_metadata["settings"])
     settings_dict["spectrum_file_path"] = None
     settings = SettingsMS2Deepscore(**settings_dict)
 
-    # Load ONNX Model and compute embeddings.
-    providers = configure_onnx_providers()
-    ort_session = ort.InferenceSession(
-        "../onnx_model_dir/ms2deepscore_model.onnx", providers=providers
-    )
     embeddings = compute_embeddings_onnx(ort_session, spectra, settings)
 
     # Use your embeddings in some way...

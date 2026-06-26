@@ -24,9 +24,9 @@ from matchms import filtering as msfilters
 
 NUM_RUNS = 3
 SPECTRA_PATH = "../spectra.mgf"
-PT_MODEL_PATH = "../onnx_model_dir/zenodo_downloads/ms2deepscore_model.pt"
-ONNX_MODEL_PATH = "../onnx_model_dir/ms2deepscore_model.onnx"
-ONNX_MODEL_SETTINGS_PATH = "../onnx_model_dir/ms2deepscore_model_settings.json"
+PT_MODEL_PATH = "../onnx_export/zenodo_downloads/ms2deepscore_model.pt"
+ONNX_MODEL_PATH = "../onnx_export/ms2deepscore_model.onnx"
+ONNX_MODEL_SETTINGS_PATH = "../onnx_export/ms2deepscore_model_settings.json"
 
 
 spectrum_processor = SpectrumProcessor(
@@ -116,13 +116,18 @@ def run_benchmark():
     ms2ds_model.eval()
 
     # ONNX setup
-    with open(ONNX_MODEL_SETTINGS_PATH, "r", encoding="utf-8") as file:
-        settings_dict = json.load(file)
-
     providers = configure_onnx_providers()
+    ort_session = ort.InferenceSession(ONNX_MODEL_PATH, providers=providers)
+    model_metadata = ort_session.get_modelmeta().custom_metadata_map
+
+    if "settings" not in model_metadata:
+        raise ValueError(
+            "Model does not contain settings. These are required for inference."
+        )
+
+    settings_dict = json.loads(model_metadata["settings"])
     settings_dict["spectrum_file_path"] = None
     settings = SettingsMS2Deepscore(**settings_dict)
-    ort_session = ort.InferenceSession(ONNX_MODEL_PATH, providers=providers)
 
     print(
         f"-> Setup completed. Benchmarking {len(spectra)} spectra over {NUM_RUNS} runs.\n"
