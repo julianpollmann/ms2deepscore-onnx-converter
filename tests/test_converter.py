@@ -21,6 +21,7 @@ def mock_settings():
     settings.max_mz = 1000
     settings.mz_bin_width = 0.1
     settings.number_of_bins = 9900
+    settings.get_dict.return_value = {"mock_key": "mock_value"}
     return settings
 
 
@@ -51,46 +52,60 @@ def test_get_metadata_length_no_metadata():
 def test_convert_to_onnx_success_with_metadata(tmp_path, model_path):
     output_dir = str(tmp_path)
 
-    convert_to_onnx(str(model_path), output_dir)
+    convert_to_onnx(model_path, output_dir)
 
     assert (tmp_path / "ms2deepscore_model.onnx").exists()
-    assert (tmp_path / "ms2deepscore_model_settings.json").exists()
 
 
-@patch("ms2ds_converter.converter.load_model")
+@patch("ms2ds_converter.converter.onnx.save")
 @patch("ms2ds_converter.converter.torch.onnx.export")
+@patch("ms2ds_converter.converter.load_model")
 def test_convert_to_onnx_success_no_metadata(
-    mock_torch_export, mock_load_model, tmp_path, mock_model
+    mock_load_model, mock_torch_export, mock_onnx_save, tmp_path, mock_model
 ):
     mock_model.model_settings.additional_metadata = []
     mock_load_model.return_value = mock_model
 
-    with patch("builtins.open"), patch("json.dump"):
-        convert_to_onnx("dummy_model.pt", str(tmp_path))
-        _, kwargs = mock_torch_export.call_args
-        assert kwargs["input_names"] == ["input_peaks"]
-        mock_model.model_settings.save_to_file.assert_called_once()
+    mock_onnx_program = MagicMock()
+    mock_torch_export.return_value = mock_onnx_program
+    mock_metadata = MagicMock()
+    mock_onnx_program.model_proto.metadata_props.add.return_value = mock_metadata
+
+    convert_to_onnx("dummy_model.pt", str(tmp_path))
+
+    _, kwargs = mock_torch_export.call_args
+    assert kwargs["input_names"] == ["input_peaks"]
+
+    assert mock_metadata.key == "settings"
+    assert mock_metadata.value == '{"mock_key": "mock_value"}'
+
+    mock_onnx_save.assert_called_once()
 
 
-@patch("ms2ds_converter.converter.load_model")
+@patch("ms2ds_converter.converter.onnx.save")
 @patch("ms2ds_converter.converter.torch.onnx.export")
+@patch("ms2ds_converter.converter.load_model")
 def test_convert_to_onnx_fallback_to_legacy(
-    mock_torch_export, mock_load_model, tmp_path, mock_model
+    mock_load_model, mock_torch_export, mock_onnx_save, tmp_path, mock_model
 ):
     mock_load_model.side_effect = [ValueError("Unsafe tensors"), mock_model]
 
-    with patch("builtins.open"), patch("json.dump"):
-        convert_to_onnx("dummy_model.pt", str(tmp_path))
-        assert mock_load_model.call_count == 2
+    mock_torch_export.return_value = MagicMock()
+
+    convert_to_onnx("dummy_model.pt", str(tmp_path))
+
+    assert mock_load_model.call_count == 2
+    mock_onnx_save.assert_called_once()
 
 
-@patch("ms2ds_converter.converter.load_model")
+@patch("ms2ds_converter.converter.onnx.save")
 @patch("ms2ds_converter.converter.torch.onnx.export")
+@patch("ms2ds_converter.converter.load_model")
 def test_convert_to_onnx_required_keys_present(
-    mock_torch_export, mock_load_model, tmp_path, mock_model, caplog
+    mock_load_model, mock_torch_export, mock_onnx_save, tmp_path, mock_model, caplog
 ):
-    """Testet, dass kein Error geloggt wird, wenn alle required_keys vorhanden sind."""
     mock_load_model.return_value = mock_model
+    mock_torch_export.return_value = MagicMock()
 
     with caplog.at_level(logging.ERROR):
         convert_to_onnx("dummy_model.pt", str(tmp_path))
@@ -101,15 +116,17 @@ def test_convert_to_onnx_required_keys_present(
         if "do not contain required attribute" in r.message
     ]
     assert len(errors) == 0
+    mock_onnx_save.assert_called_once()
 
 
-@patch("ms2ds_converter.converter.load_model")
+@patch("ms2ds_converter.converter.onnx.save")
 @patch("ms2ds_converter.converter.torch.onnx.export")
+@patch("ms2ds_converter.converter.load_model")
 def test_convert_to_onnx_missing_required_keys(
-    mock_torch_export, mock_load_model, tmp_path, mock_model, caplog
+    mock_load_model, mock_torch_export, mock_onnx_save, tmp_path, mock_model, caplog
 ):
-    """Testet, dass spezifische ERROR-Logs geschrieben werden, wenn required_keys fehlen."""
     mock_load_model.return_value = mock_model
+    mock_torch_export.return_value = MagicMock()
 
     del mock_model.model_settings.min_mz
     del mock_model.model_settings.embedding_dim
@@ -128,3 +145,4 @@ def test_convert_to_onnx_missing_required_keys(
     assert not any(
         "do not contain required attribute max_mz" in r.message for r in caplog.records
     )
+    mock_onnx_save.assert_called_once()
